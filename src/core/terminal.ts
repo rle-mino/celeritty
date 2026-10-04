@@ -332,7 +332,7 @@ export class Terminal {
   }
 
   setOptions(patch: Partial<TerminalOptions>): void {
-    this.#assertLive("setOptions");
+    if (this.#disposed) return;
     const previous = this.#options;
     const next = { ...previous, ...patch };
     next.scrollSensitivity = scrollSensitivity(next.scrollSensitivity);

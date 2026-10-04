@@ -191,8 +191,11 @@ pub struct MouseInput {
 /// editor pane exceeds.
 pub fn encode_mouse(input: &MouseInput) -> Option<Vec<u8>> {
     // The wheel drives the alternate screen's pager directly when alternate
-    // scroll is on, since such programs do not listen for mouse reports.
-    if input.reporting == MouseReporting::None && input.alternate_scroll && input.alt_screen {
+    // scroll is on and this encoder cannot emit the requested mouse protocol.
+    if (input.reporting == MouseReporting::None || !input.sgr_enabled)
+        && input.alternate_scroll
+        && input.alt_screen
+    {
         // Under DECCKM the arrows are SS3-prefixed (`ESC O A`), not CSI. Neovim
         // and every full-screen pager enable it, so emitting CSI here would send
         // bytes the running program does not read as arrow keys.
@@ -539,6 +542,33 @@ mod tests {
         input.alt_screen = true;
         input.application_cursor = true;
         assert_eq!(encode_mouse(&input), Some(b"\x1bOB".to_vec()));
+    }
+
+    #[test]
+    fn unsupported_mouse_protocol_keeps_alternate_scroll_arrows() {
+        for application_cursor in [false, true] {
+            for (kind, suffix) in [
+                (MouseEventKind::ScrollUp, b'A'),
+                (MouseEventKind::ScrollDown, b'B'),
+            ] {
+                let mut input = mouse(kind, MouseButton::None, 0, 0);
+                input.reporting = MouseReporting::Click;
+                input.sgr_enabled = false;
+                input.alternate_scroll = true;
+                input.alt_screen = true;
+                input.application_cursor = application_cursor;
+                assert_eq!(
+                    encode_mouse(&input),
+                    Some(vec![
+                        0x1b,
+                        if application_cursor { b'O' } else { b'[' },
+                        suffix
+                    ])
+                );
+                input.alternate_scroll = false;
+                assert_eq!(encode_mouse(&input), None);
+            }
+        }
     }
 
     #[test]

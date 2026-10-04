@@ -207,10 +207,13 @@ belong in the host; composition keystrokes never escape to those handlers.
 
 `TerminalOptions.scrollSensitivity?: number` controls **local scrollback**.
 It defaults to `1` and accepts finite, non-negative numbers. `0.5` halves travel;
-`0` disables local wheel scrolling. Invalid values throw `RangeError`
+`0` disables local wheel scrolling and leaves the event available for the host
+page to scroll when no application mouse or alternate-screen mode owns it.
+Invalid values throw `RangeError`
 synchronously, before construction changes the host or `setOptions` applies
 any part of a patch. Omitting it from a patch keeps the current value;
-explicitly passing `undefined` restores `1`.
+explicitly passing `undefined` restores `1`. Calls to `setOptions` after
+`dispose()` are ignored.
 
 The default fixes delta conversion rather than applying an arbitrary slowdown:
 
@@ -240,7 +243,8 @@ term.setOptions({ scrollSensitivity: undefined }); // Restore the default.
 
 Applications requesting supported SGR mouse reporting receive one report per
 non-zero vertical wheel event, independent of this local multiplier. On the
-alternate screen, mouse reporting takes priority; without reporting,
+alternate screen, supported SGR mouse reporting takes priority; without it
+(including legacy mouse reporting without SGR),
 `alternateScroll` sends one arrow key per event with the appropriate cursor-key
 mode. With alternate scroll disabled, no local history is scrolled. An event
 never both sends application input and scrolls local history. Application

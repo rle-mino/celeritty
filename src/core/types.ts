@@ -64,7 +64,8 @@ export interface TerminalOptions {
   scrollback: number;
   /**
    * Local wheel scroll multiplier, default 1. Finite and >= 0; 0 disables
-   * local wheel scrolling. Does not scale application mouse reports or
+   * local wheel scrolling and allows host-page scrolling outside application
+   * mouse and alternate-screen modes. Does not scale application mouse reports or
    * alternate-screen arrow keys. Pixels use the rendered CSS cell height,
    * lines map directly, and pages use the number of visible grid rows.
    */

@@ -315,11 +315,9 @@ export class TerminalRenderer implements Renderer {
           source.width,
           source.height,
         ]);
-      } catch (error) {
-        // Chromium's software WebGPU path can reject a recreated canvas image
-        // (for example after a font change). Keep rendering through WebGPU by
-        // uploading RGBA bytes instead. Other failures must still surface.
-        if (!(error instanceof TypeError)) throw error;
+      } catch {
+        // External-image imports can fail with engine-specific exceptions.
+        // Upload RGBA bytes instead; failures of that upload still surface.
         this.#uploadAtlasPixels(source);
         this.#atlasReadback = true;
       }

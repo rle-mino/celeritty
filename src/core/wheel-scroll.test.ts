@@ -146,7 +146,7 @@ describe("wheel conversion with real WASM scroll offsets", () => {
     q.dispatch(-1, 1);
     expect(q.engine.displayOffset).toBe(1);
     q.state.sensitivity = 0;
-    q.dispatch(-100, 2);
+    expect(q.dispatch(-100, 2).preventDefault).not.toHaveBeenCalled();
     expect(q.engine.displayOffset).toBe(1);
   });
 
@@ -192,6 +192,28 @@ describe("wheel conversion with real WASM scroll offsets", () => {
     expect(q.scroll).not.toHaveBeenCalled();
     q.feed("\x1b[?1049l");
     expect(q.engine.displayOffset).toBe(20);
+  });
+
+  it("keeps alternate arrows without SGR despite legacy mouse reporting", () => {
+    const q = setup();
+    q.feed("\x1b[?1049h\x1b[?1000h\x1b[?1006l\x1b[?1h");
+    q.state.sensitivity = 0;
+    expect(q.dispatch(-1).preventDefault).toHaveBeenCalled();
+    q.dispatch(1);
+    q.feed("\x1b[?1l");
+    q.dispatch(-1);
+    q.dispatch(1);
+    expect(q.emit.mock.calls.map(([bytes]) => new TextDecoder().decode(bytes))).toEqual([
+      "\x1bOA",
+      "\x1bOB",
+      "\x1b[A",
+      "\x1b[B",
+    ]);
+    expect(q.measure).not.toHaveBeenCalled();
+    expect(q.scroll).not.toHaveBeenCalled();
+    q.feed("\x1b[?1007l");
+    q.dispatch(1);
+    expect(q.emit).toHaveBeenCalledTimes(4);
   });
 
   it("does not locally scroll when reporting uses an unsupported encoding", () => {

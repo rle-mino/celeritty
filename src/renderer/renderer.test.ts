@@ -172,10 +172,14 @@ describe("glyph atlas upload", () => {
     q.renderer.dispose();
   });
 
-  it("recovers image import failures with RGBA and remembers the path across atlas replacement", async () => {
+  it.each([
+    new TypeError("image import failed"),
+    new DOMException("image import failed", "OperationError"),
+    new Error("image import failed"),
+  ])("recovers %s with RGBA across atlas replacement", async (failure) => {
     const q = await uploadFixture();
     q.queue.copyExternalImageToTexture.mockImplementation(() => {
-      throw new TypeError("Failed to copy content from external image.");
+      throw failure;
     });
     q.render();
     expect(q.read).toHaveBeenCalledWith(0, 0, 1, 1);
@@ -197,15 +201,9 @@ describe("glyph atlas upload", () => {
     q.renderer.dispose();
   });
 
-  it("surfaces other failures and does not mark an unsuccessful upload clean", async () => {
+  it("surfaces pixel upload failures and does not mark an unsuccessful upload clean", async () => {
     const q = await uploadFixture();
     const failure = new Error("device failure");
-    q.queue.copyExternalImageToTexture.mockImplementationOnce(() => {
-      throw failure;
-    });
-    expect(q.render).toThrow(failure);
-    expect(q.read).not.toHaveBeenCalled();
-    expect(q.markUploaded).not.toHaveBeenCalled();
     q.queue.copyExternalImageToTexture.mockImplementation(() => {
       throw new TypeError("image import failed");
     });

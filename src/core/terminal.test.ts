@@ -180,7 +180,11 @@ describe("Terminal lifecycle", () => {
       expect(() => terminal.setOptions({ scrollSensitivity: value })).not.toThrow();
     }
     terminal.dispose();
-    expect(() => terminal.setOptions({ scrollSensitivity: 1 })).toThrow("after dispose");
+    expect(() => terminal.setOptions({ scrollSensitivity: 1 })).not.toThrow();
+    expect(() =>
+      terminal.setOptions({ scrollSensitivity: -1, colors: OPTIONS.colors }),
+    ).not.toThrow();
+    expect(renderer.setPalette).not.toHaveBeenCalled();
   });
 
   it("reads output routing only while a wheel fraction is pending, including sync flushes", async () => {

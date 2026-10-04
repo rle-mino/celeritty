@@ -52,9 +52,9 @@ export function sendPointerToEngine(
   event: MouseEvent | WheelEvent,
   emitData: (bytes: Uint8Array) => void,
 ): boolean {
-  // Alternate-scroll arrows need no coordinates and work without reporting.
+  // Alternate-scroll arrows need no coordinates when SGR reporting is unavailable.
   const alternateWheel =
-    engine.mouseReporting === 0 &&
+    (engine.mouseReporting === 0 || !engine.sgrMouse) &&
     engine.altScreen &&
     engine.alternateScroll &&
     (kind === MOUSE_SCROLL_UP || kind === MOUSE_SCROLL_DOWN);
@@ -249,13 +249,18 @@ export function handleWheel(
     state.wheel.reset();
     return;
   }
-  event.preventDefault();
   // Reporting may use an unsupported encoding; it must not fall through to
   // local history. The alternate screen likewise never scrolls main history.
   if (state.engine.mouseReporting !== 0 || state.engine.altScreen) {
+    event.preventDefault();
     state.wheel.reset();
     return;
   }
+  if (state.sensitivity === 0) {
+    state.wheel.reset();
+    return;
+  }
+  event.preventDefault();
   const delta = state.wheel.lines(
     { deltaMode: mode, deltaY: event.deltaY },
     state.cellHeight,

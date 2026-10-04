@@ -275,6 +275,12 @@ test("browser wheel routing: SGR, alternate arrows, disabled alternate scroll, r
     dispatch(-0.1);
     dispatch(100);
     dispatch(0, 100);
+    qa.feed("\x1b[?1000h\x1b[?1006l");
+    dispatch(-0.1);
+    dispatch(100);
+    qa.feed("\x1b[?1l");
+    dispatch(-0.1);
+    dispatch(100);
     qa.feed("\x1b[?1000h\x1b[?1006h");
     dispatch(-0.1);
     dispatch(100);
@@ -290,7 +296,37 @@ test("browser wheel routing: SGR, alternate arrows, disabled alternate scroll, r
       errors: qa.errors,
     };
   });
-  expect(result.replies).toEqual(["\x1bOA", "\x1bOB", "\x1b[<64;1;1M", "\x1b[<65;1;1M"]);
+  expect(result.replies).toEqual([
+    "\x1bOA",
+    "\x1bOB",
+    "\x1bOA",
+    "\x1bOB",
+    "\x1b[A",
+    "\x1b[B",
+    "\x1b[<64;1;1M",
+    "\x1b[<65;1;1M",
+  ]);
   expect(result.after).toEqual(result.before);
   expect(result.errors).toEqual([]);
+});
+
+test("zero sensitivity lets the host page scroll without moving terminal history", async ({
+  page,
+}) => {
+  await page.goto("/browser.html");
+  await page.waitForFunction(() => window.qa?.state().frames > 0);
+  await page.evaluate(() => {
+    document.body.style.height = "3000px";
+    const { qa } = window;
+    qa.feed(Array.from({ length: 200 }, (_, i) => `ROW_${i}`).join("\r\n"));
+    qa.terminal.scrollLines(20);
+    qa.terminal.setOptions({ scrollSensitivity: 0 });
+  });
+  await expect.poll(() => page.evaluate(() => window.qa.state().rows[0])).toContain("ROW_");
+  const before = await page.evaluate(() => window.qa.state().rows);
+  await page.locator("#terminal").hover();
+  await page.mouse.wheel(0, 120);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.qa.state().rows)).toEqual(before);
+  expect(await page.evaluate(() => window.qa.errors)).toEqual([]);
 });
